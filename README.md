@@ -212,5 +212,5 @@ State lives outside the repo at `~/.hermes/webui-mvp/` by default
 ## Repo
 
 ```
-git@github.com:<your-username>/hermes-webui.git
+git@github.com:nesquena/hermes-webui.git
 ```
