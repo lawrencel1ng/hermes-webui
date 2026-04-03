@@ -122,3 +122,72 @@ def test_panels_js_clears_model_on_switch():
     assert "localStorage.removeItem('hermes-webui-model')" in content
     assert "loadWorkspaceList" in content
     assert "renderSessionList" in content
+
+
+# ── Regression: profile switch base dir bug (PR #44) ──────────────────────
+
+def test_profile_switch_base_home_not_subdir():
+    """_DEFAULT_HERMES_HOME must always be the base ~/.hermes root, not a
+    profile subdir.  Regression: if HERMES_HOME was mutated to a profiles/
+    subdir at server startup, switch_profile() looked for
+    ~/.hermes/profiles/X/profiles/X which never exists — returning 404.
+
+    We verify the fix is present via static analysis of profiles.py.
+    The live-switch variant is in test_profile_switch_returns_default_model_and_workspace.
+    """
+    content = (REPO_ROOT / "api" / "profiles.py").read_text()
+
+    # The fix must define a resolver function that handles the profiles/ subdir case
+    assert "_resolve_base_hermes_home" in content, (
+        "profiles.py must define _resolve_base_hermes_home() to safely resolve "
+        "the base HERMES_HOME regardless of HERMES_HOME env var mutation"
+    )
+    assert "p.parent.name == 'profiles'" in content, (
+        "_resolve_base_hermes_home must detect when HERMES_HOME points to a "
+        "profiles/ subdir (e.g. ~/.hermes/profiles/webui) and walk up to base"
+    )
+    assert "p.parent.parent" in content, (
+        "_resolve_base_hermes_home must return p.parent.parent when HERMES_HOME "
+        "is a profiles/ subdir, giving back the actual ~/.hermes base"
+    )
+    # _DEFAULT_HERMES_HOME must be set from the resolver, not directly from env
+    assert "_DEFAULT_HERMES_HOME = _resolve_base_hermes_home()" in content, (
+        "_DEFAULT_HERMES_HOME must be assigned from _resolve_base_hermes_home(), "
+        "not directly from os.getenv('HERMES_HOME')"
+    )
+
+
+def test_api_helper_returns_clean_error_message():
+    """workspace.js api() helper must parse JSON error bodies and surface
+    the human-readable 'error' field, not raw JSON like
+    {'error': 'Profile X does not exist.'}.
+
+    Regression: api() did `throw new Error(await res.text())` which made
+    showToast display 'Switch failed: {"error":"Profile X does not exist."}' --
+    JSON noise the user shouldn't see.
+    """
+    content = (REPO_ROOT / "static" / "workspace.js").read_text()
+    # Must parse the JSON error body
+    assert "JSON.parse(text)" in content, (
+        "api() must parse JSON error bodies -- raw res.text() leaks JSON to the UI"
+    )
+    # Must extract the .error field
+    assert "j.error" in content, (
+        "api() must extract j.error from parsed JSON error response"
+    )
+
+
+def test_profile_switch_resolve_base_home_logic():
+    """Static analysis: _resolve_base_hermes_home() must handle the case
+    where HERMES_HOME points to a profiles/ subdir by walking up to the base.
+    """
+    content = (REPO_ROOT / "api" / "profiles.py").read_text()
+    assert "_resolve_base_hermes_home" in content, (
+        "profiles.py must define _resolve_base_hermes_home()"
+    )
+    assert "p.parent.name == 'profiles'" in content, (
+        "_resolve_base_hermes_home must detect and unwrap profiles/ subdir paths"
+    )
+    assert "p.parent.parent" in content, (
+        "_resolve_base_hermes_home must walk up two levels from a profiles/ subdir"
+    )

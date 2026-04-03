@@ -490,7 +490,7 @@ function closeWsDropdown(){
   if(dd)dd.classList.remove('open');
 }
 document.addEventListener('click',e=>{
-  if(!e.target.closest('#wsChipWrap'))closeWsDropdown();
+  if(!e.target.closest('#sidebarWsDisplay') && !e.target.closest('#wsDropdown'))closeWsDropdown();
 });
 
 async function loadWorkspacesPanel(){
@@ -660,40 +660,74 @@ document.addEventListener('click', e => {
 
 async function switchToProfile(name) {
   if (S.busy) { showToast('Cannot switch profiles while agent is running'); return; }
+
+  // Determine whether the current session has any messages.
+  // A session with messages is "in progress" and belongs to the current profile —
+  // we must not retag it.  We'll start a fresh session for the new profile instead.
+  const sessionInProgress = S.session && S.messages && S.messages.length > 0;
+
   try {
     const data = await api('/api/profile/switch', { method: 'POST', body: JSON.stringify({ name }) });
     S.activeProfile = data.active || name;
-    // Clear stale model pref so profile default applies
+
+    // ── Model ──────────────────────────────────────────────────────────────
     localStorage.removeItem('hermes-webui-model');
-    // Refresh model dropdown (profile may have different provider/models)
     _skillsData = null;
     await populateModelDropdown();
-    // Apply profile's default model if provided
-    if (data.default_model && $('modelSelect')) {
-      $('modelSelect').value = data.default_model;
-      if ($('modelSelect').value !== data.default_model) {
-        // Model not in list — add it
-        const opt = document.createElement('option');
-        opt.value = data.default_model;
-        opt.textContent = data.default_model.split('/').pop();
-        $('modelSelect').insertBefore(opt, $('modelSelect').firstChild);
-        $('modelSelect').value = data.default_model;
+    if (data.default_model) {
+      const sel = $('modelSelect');
+      const resolved = _applyModelToDropdown(data.default_model, sel);
+      const modelToUse = resolved || data.default_model;
+      S._pendingProfileModel = modelToUse;
+      // Only patch the in-memory session model if we're NOT about to replace the session
+      if (S.session && !sessionInProgress) {
+        S.session.model = modelToUse;
       }
     }
-    // Refresh workspace list (now profile-local)
+
+    // ── Workspace ──────────────────────────────────────────────────────────
     _workspaceList = null;
     await loadWorkspaceList();
-    // Reset profile filter and refresh session list
+    if (data.default_workspace) {
+      // Always store the profile default for new sessions
+      S._profileDefaultWorkspace = data.default_workspace;
+
+      if (S.session && !sessionInProgress) {
+        // Empty session (no messages yet) — safe to update it in place
+        try {
+          await api('/api/session/update', { method: 'POST', body: JSON.stringify({
+            session_id: S.session.session_id,
+            workspace: data.default_workspace,
+            model: S.session.model,
+          })});
+          S.session.workspace = data.default_workspace;
+        } catch (_) {}
+      }
+    }
+
+    // ── Session ────────────────────────────────────────────────────────────
     _showAllProfiles = false;
-    await renderSessionList();
-    syncTopbar();
-    // Refresh visible sidebar panels
+
+    if (sessionInProgress) {
+      // The current session has messages and belongs to the previous profile.
+      // Start a new session for the new profile so nothing gets cross-tagged.
+      await newSession(false);
+      await renderSessionList();
+      showToast('Switched to profile: ' + name + ' — new conversation started');
+    } else {
+      // No messages yet — just refresh the list and topbar in place
+      await renderSessionList();
+      syncTopbar();
+      showToast('Switched to profile: ' + name);
+    }
+
+    // ── Sidebar panels ─────────────────────────────────────────────────────
     if (_currentPanel === 'skills') await loadSkills();
     if (_currentPanel === 'memory') await loadMemory();
     if (_currentPanel === 'tasks') await loadCrons();
     if (_currentPanel === 'profiles') await loadProfilesPanel();
     if (_currentPanel === 'workspaces') await loadWorkspacesPanel();
-    showToast('Switched to profile: ' + name);
+
   } catch (e) { showToast('Switch failed: ' + e.message); }
 }
 

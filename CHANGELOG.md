@@ -5,6 +5,54 @@
 
 ---
 
+## [v0.26] Profile System Polish -- 10 Post-Sprint-23 Fixes
+*April 3, 2026 | 426 tests*
+
+### Bug Fixes
+- **Profile switch base dir bug.** When `HERMES_HOME` was mutated to a
+  `profiles/` subdir at startup, `switch_profile()` doubled the path
+  (e.g. `~/.hermes/profiles/X/profiles/X`). New `_resolve_base_hermes_home()`
+  detects profile subdirs and walks up to the actual base.
+- **Cross-provider model routing.** Picking a model from a different provider
+  than the config's default now routes through OpenRouter instead of trying
+  a direct API call to a provider whose key may not exist.
+- **Legacy sessions missing profile tag.** `all_sessions()` now backfills
+  `profile='default'` for pre-Sprint-22 sessions so the profile filter works.
+- **Workspace list cleanup.** Stale paths, test artifacts, and cross-profile
+  entries are now cleaned on load. Legacy global workspace file migrated
+  once for the default profile.
+- **API error messages.** `api()` helper now parses JSON error bodies and
+  surfaces the human-readable message instead of raw JSON.
+- **Workspace dropdown moved to sidebar.** The workspace picker now opens
+  upward from the sidebar bottom instead of clipping behind the topbar.
+
+### Features
+- **Rate limit error display.** Rate limit errors (429) now show a distinct
+  card with a rate limit icon and hint, instead of the generic error message.
+- **SSE `apperror`/`warning` events.** Server can send typed error events
+  that the frontend handles with appropriate UX (rate limit card, fallback
+  notice, etc.).
+- **Smart model resolver.** `_findModelInDropdown()` handles name mismatches
+  between config model IDs and dropdown values (e.g. `claude-sonnet-4-6` vs
+  `anthropic/claude-sonnet-4.6`).
+- **Profile switch starts new session.** When the current session has messages,
+  switching profiles automatically starts a fresh session to prevent
+  cross-profile tagging.
+- **Per-profile toolsets.** Agent now reads `platform_toolsets.cli` from the
+  active profile's config at call time, not the boot-time snapshot.
+- **Per-profile fallback model.** `fallback_model` config is read from the
+  active profile and passed to AIAgent.
+
+### Architecture
+- `api/profiles.py`: `_resolve_base_hermes_home()` replaces naive env var read.
+- `api/workspace.py`: `_clean_workspace_list()`, `_migrate_global_workspaces()`.
+- `api/streaming.py`: Per-profile toolsets and fallback model at call time.
+- `api/models.py`: `all_sessions()` backfills `profile='default'`.
+- `static/ui.js`: `_findModelInDropdown()`, `_applyModelToDropdown()`.
+- `static/messages.js`: `apperror` and `warning` SSE event handlers.
+
+---
+
 ## [v0.25] Sprint 23 -- Profile/Workspace/Model Coherence
 *April 3, 2026 | 423 tests*
 
@@ -829,4 +877,4 @@ Three-panel layout: sessions sidebar, chat area, workspace panel.
 
 ---
 
-*Last updated: v0.25, April 3, 2026 | Tests: 423*
+*Last updated: v0.26, April 3, 2026 | Tests: 426*

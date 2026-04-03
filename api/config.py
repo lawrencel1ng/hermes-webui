@@ -373,15 +373,16 @@ def resolve_model_provider(model_id: str):
 
     if '/' in model_id:
         prefix, bare = model_id.split('/', 1)
-        # If prefix matches config provider, strip it and use that provider directly
+        # If prefix matches config provider exactly, strip it and use that provider directly.
+        # e.g. config=anthropic, model=anthropic/claude-... → bare name to anthropic API
         if config_provider and prefix == config_provider:
             return bare, config_provider, config_base_url
-        # If the config provider is openrouter (or unset/None), pass the full
-        # provider/model string through -- OpenRouter uses this as its model ID.
-        # Only strip the prefix and switch to a direct-API provider when the
-        # config is explicitly set to that direct provider.
-        if config_provider and config_provider != 'openrouter' and prefix in _PROVIDER_MODELS:
-            return bare, prefix, None
+        # If prefix does NOT match config provider, the user picked a cross-provider model
+        # from the OpenRouter dropdown (e.g. config=anthropic but picked openai/gpt-5.4-mini).
+        # In this case always route through openrouter with the full provider/model string.
+        # Never strip the prefix and try a direct-API call to a provider whose key may not exist.
+        if prefix in _PROVIDER_MODELS and prefix != config_provider:
+            return model_id, 'openrouter', None
 
     return model_id, config_provider, config_base_url
 

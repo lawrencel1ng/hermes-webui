@@ -16,9 +16,44 @@ from pathlib import Path
 # ── Module state ────────────────────────────────────────────────────────────
 _active_profile = 'default'
 _profile_lock = threading.Lock()
-# Read from env var so test isolation (HERMES_HOME=TEST_STATE_DIR) is respected.
-# Evaluated at import time; server restart picks up any env change.
-_DEFAULT_HERMES_HOME = Path(os.getenv('HERMES_HOME', str(Path.home() / '.hermes')))
+
+def _resolve_base_hermes_home() -> Path:
+    """Return the BASE ~/.hermes directory — the root that contains profiles/.
+
+    This is intentionally distinct from HERMES_HOME, which tracks the *active
+    profile's* home and changes on every profile switch.  The base dir must
+    always point to the top-level .hermes regardless of which profile is active.
+
+    Resolution order:
+      1. HERMES_BASE_HOME env var (set explicitly, highest priority)
+      2. HERMES_HOME env var — but only if it does NOT look like a profile subdir
+         (i.e. its parent is not named 'profiles').  This handles test isolation
+         where HERMES_HOME is set to an isolated test state dir.
+      3. ~/.hermes (always-correct default)
+
+    The bug this prevents: if HERMES_HOME has already been mutated to
+    /home/user/.hermes/profiles/webui (by init_profile_state at startup),
+    reading it here would make _DEFAULT_HERMES_HOME point to that subdir,
+    causing switch_profile('webui') to look for
+    /home/user/.hermes/profiles/webui/profiles/webui — which doesn't exist.
+    """
+    # Explicit override for tests or unusual setups
+    base_override = os.getenv('HERMES_BASE_HOME', '').strip()
+    if base_override:
+        return Path(base_override).expanduser()
+
+    hermes_home = os.getenv('HERMES_HOME', '').strip()
+    if hermes_home:
+        p = Path(hermes_home).expanduser()
+        # If HERMES_HOME points to a profiles/ subdir, walk up two levels to the base
+        if p.parent.name == 'profiles':
+            return p.parent.parent
+        # Otherwise trust it (e.g. test isolation sets HERMES_HOME to TEST_STATE_DIR)
+        return p
+
+    return Path.home() / '.hermes'
+
+_DEFAULT_HERMES_HOME = _resolve_base_hermes_home()
 
 
 def _read_active_profile_file() -> str:

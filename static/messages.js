@@ -162,6 +162,46 @@ async function send(){
       renderSessionList();setBusy(false);setStatus('');
     });
 
+    source.addEventListener('apperror',e=>{
+      // Application-level error sent explicitly by the server (rate limit, crash, etc.)
+      // This is distinct from the SSE network 'error' event below.
+      source.close();
+      delete INFLIGHT[activeSid];clearInflight();stopApprovalPolling();
+      if(!_approvalSessionId||_approvalSessionId===activeSid) hideApprovalCard();
+      if(S.session&&S.session.session_id===activeSid){
+        S.activeStreamId=null;const _cbe=$('btnCancel');if(_cbe)_cbe.style.display='none';
+        clearLiveToolCards();if(!assistantText)removeThinking();
+        try{
+          const d=JSON.parse(e.data);
+          const isRateLimit=d.type==='rate_limit';
+          const icon=isRateLimit?'⏱️':'⚠️';
+          const label=isRateLimit?'Rate limit reached':'Error';
+          const hint=d.hint?`\n\n*${d.hint}*`:'';
+          S.messages.push({role:'assistant',content:`**${icon} ${label}:** ${d.message}${hint}`});
+        }catch(_){
+          S.messages.push({role:'assistant',content:'**⚠️ Error:** An error occurred. Check server logs.'});
+        }
+        renderMessages();
+      }else if(typeof trackBackgroundError==='function'){
+        const _errTitle=(typeof _allSessions!=='undefined'&&_allSessions.find(s=>s.session_id===activeSid)||{}).title||null;
+        try{const d=JSON.parse(e.data);trackBackgroundError(activeSid,_errTitle,d.message||'Error');}
+        catch(_){trackBackgroundError(activeSid,_errTitle,'Error');}
+      }
+      if(!S.session||!INFLIGHT[S.session.session_id]){setBusy(false);setStatus('');}
+    });
+
+    source.addEventListener('warning',e=>{
+      // Non-fatal warning from server (e.g. fallback activated, retrying)
+      if(!S.session||S.session.session_id!==activeSid) return;
+      try{
+        const d=JSON.parse(e.data);
+        // Show as a small inline notice, not a full error
+        setStatus(`⚠️ ${d.message||'Warning'}`);
+        // If it's a fallback notice, show it briefly then clear
+        if(d.type==='fallback') setTimeout(()=>setStatus(''),4000);
+      }catch(_){}
+    });
+
     source.addEventListener('error',e=>{
       source.close();
       // Attempt one reconnect if the stream is still active server-side

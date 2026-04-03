@@ -13,7 +13,10 @@ async function newSession(flash){
   MSG_QUEUE.length=0;updateQueueBadge();
   S.toolCalls=[];
   clearLiveToolCards();
-  const inheritWs=S.session?S.session.workspace:null;
+  // Use profile default workspace for new sessions after a profile switch (one-shot),
+  // otherwise inherit from the current session (or let server pick the default)
+  const inheritWs=S._profileDefaultWorkspace||(S.session?S.session.workspace:null);
+  S._profileDefaultWorkspace=null; // consume — only applies to the first new session after switch
   const data=await api('/api/session/new',{method:'POST',body:JSON.stringify({model:$('modelSelect').value,workspace:inheritWs})});
   S.session=data.session;S.messages=data.session.messages||[];
   if(flash)S.session._flash=true;
@@ -113,7 +116,9 @@ function renderSessionListFromCache(){
   const titleIds=new Set(titleMatches.map(s=>s.session_id));
   const allMatched=q?[...titleMatches,..._contentSearchResults.filter(s=>!titleIds.has(s.session_id))]:titleMatches;
   // Filter by active profile (unless "All profiles" is toggled on)
-  const profileFiltered=_showAllProfiles?allMatched:allMatched.filter(s=>!s.profile||s.profile===S.activeProfile);
+  // Server backfills profile='default' for legacy sessions, so every session has a profile.
+  // Show only sessions tagged to the active profile; 'All profiles' toggle overrides.
+  const profileFiltered=_showAllProfiles?allMatched:allMatched.filter(s=>s.profile===S.activeProfile);
   // Filter by active project
   const projectFiltered=_activeProject?profileFiltered.filter(s=>s.project_id===_activeProject):profileFiltered;
   // Filter archived unless toggle is on

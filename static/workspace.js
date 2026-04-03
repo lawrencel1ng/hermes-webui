@@ -1,7 +1,13 @@
 async function api(path,opts={}){
   const url=new URL(path,location.origin);
   const res=await fetch(url.href,{credentials:'include',headers:{'Content-Type':'application/json'},...opts});
-  if(!res.ok)throw new Error(await res.text());
+  if(!res.ok){
+    const text=await res.text();
+    // Parse JSON error body and surface the human-readable message,
+    // rather than showing raw JSON like {"error":"Profile 'x' does not exist."}
+    try{const j=JSON.parse(text);throw new Error(j.error||j.message||text);}
+    catch(e){if(e instanceof SyntaxError)throw new Error(text);throw e;}
+  }
   const ct=res.headers.get('content-type')||'';
   return ct.includes('application/json')?res.json():res.text();
 }

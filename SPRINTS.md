@@ -1,6 +1,6 @@
 # Hermes Web UI -- Forward Sprint Plan
 
-> Current state: v0.25 | 423 tests | Daily driver ready
+> Current state: v0.26 | 426 tests | Daily driver ready
 > This document plans the path from here to two targets:
 >
 > Target A: 1:1 feature parity with the Hermes CLI (everything you can do from the
@@ -663,5 +663,5 @@ and switchToProfile() didn't refresh workspaces or sessions.
 ---
 
 *Last updated: April 3, 2026*
-*Current version: v0.25 | 423 tests*
+*Current version: v0.26 | 426 tests*
 *Next sprint: Sprint 24 (Desktop Application)*

@@ -112,13 +112,38 @@ def _run_agent_streaming(session_id, msg_text, model, workspace, stream_id, atta
             if AIAgent is None:
                 raise ImportError("AIAgent not available -- check that hermes-agent is on sys.path")
             resolved_model, resolved_provider, resolved_base_url = resolve_model_provider(model)
+
+            # Read per-profile config at call time (not module-level snapshot)
+            from api.config import get_config as _get_config
+            _cfg = _get_config()
+
+            # Per-profile toolsets (fall back to module-level CLI_TOOLSETS)
+            _pt = _cfg.get('platform_toolsets', {})
+            _toolsets = _pt.get('cli', CLI_TOOLSETS) if isinstance(_pt, dict) else CLI_TOOLSETS
+
+            # Fallback model from profile config (e.g. for rate-limit recovery)
+            _fallback = _cfg.get('fallback_model') or None
+            if _fallback:
+                # Resolve the fallback through our provider logic too
+                fb_model = _fallback.get('model', '')
+                fb_provider = _fallback.get('provider', '')
+                fb_base_url = _fallback.get('base_url')
+                _fallback_resolved = {
+                    'model': fb_model,
+                    'provider': fb_provider,
+                    'base_url': fb_base_url,
+                }
+            else:
+                _fallback_resolved = None
+
             agent = AIAgent(
                 model=resolved_model,
                 provider=resolved_provider,
                 base_url=resolved_base_url,
                 platform='cli',
                 quiet_mode=True,
-                enabled_toolsets=CLI_TOOLSETS,
+                enabled_toolsets=_toolsets,
+                fallback_model=_fallback_resolved,
                 session_id=session_id,
                 stream_delta_callback=on_token,
                 tool_progress_callback=on_tool,
@@ -203,7 +228,18 @@ def _run_agent_streaming(session_id, msg_text, model, workspace, stream_id, atta
 
     except Exception as e:
         print('[webui] stream error:\n' + traceback.format_exc(), flush=True)
-        put('error', {'message': str(e)})
+        err_str = str(e)
+        # Detect rate limit errors specifically so the client can show a helpful card
+        # rather than the generic "Connection lost" message
+        is_rate_limit = 'rate limit' in err_str.lower() or '429' in err_str or 'RateLimitError' in type(e).__name__
+        if is_rate_limit:
+            put('apperror', {
+                'message': err_str,
+                'type': 'rate_limit',
+                'hint': 'Rate limit reached. The fallback model (if configured) was also exhausted. Try again in a moment.',
+            })
+        else:
+            put('apperror', {'message': err_str, 'type': 'error'})
     finally:
         _clear_thread_env()  # TD1: always clear thread-local context
         with STREAMS_LOCK:

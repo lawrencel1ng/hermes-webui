@@ -53,17 +53,31 @@ def _last_workspace_file() -> Path:
 def _profile_default_workspace() -> str:
     """Read the profile's default workspace from its config.yaml.
 
+    Checks keys in priority order:
+      1. 'workspace'         — explicit webui workspace key
+      2. 'default_workspace' — alternate explicit key
+      3. 'terminal.cwd'      — hermes-agent terminal working dir (most common)
+
     Falls back to the boot-time DEFAULT_WORKSPACE constant.
     """
     try:
-        from api.profiles import get_active_hermes_home
         from api.config import get_config
         cfg = get_config()
-        ws = cfg.get('default_workspace')
-        if ws:
-            p = Path(ws).expanduser().resolve()
-            if p.is_dir():
-                return str(p)
+        # Explicit webui workspace keys first
+        for key in ('workspace', 'default_workspace'):
+            ws = cfg.get(key)
+            if ws:
+                p = Path(str(ws)).expanduser().resolve()
+                if p.is_dir():
+                    return str(p)
+        # Fall through to terminal.cwd — the agent's configured working directory
+        terminal_cfg = cfg.get('terminal', {})
+        if isinstance(terminal_cfg, dict):
+            cwd = terminal_cfg.get('cwd', '')
+            if cwd and str(cwd) not in ('.', ''):
+                p = Path(str(cwd)).expanduser().resolve()
+                if p.is_dir():
+                    return str(p)
     except (ImportError, Exception):
         pass
     return str(_BOOT_DEFAULT_WORKSPACE)
@@ -71,26 +85,94 @@ def _profile_default_workspace() -> str:
 
 # ── Public API ──────────────────────────────────────────────────────────────
 
+def _clean_workspace_list(workspaces: list) -> list:
+    """Sanitize a workspace list:
+    - Remove entries whose paths no longer exist on disk.
+    - Remove entries that look like test artifacts (webui-mvp-test, test-workspace).
+    - Remove entries whose paths live inside another profile's directory
+      (e.g. ~/.hermes/profiles/X/... should not appear on a different profile).
+    - Rename any entry whose name is literally 'default' to 'Home' (avoids
+      confusion with the 'default' profile name).
+    Returns the cleaned list (may be empty).
+    """
+    hermes_profiles = (Path.home() / '.hermes' / 'profiles').resolve()
+    result = []
+    for w in workspaces:
+        path = w.get('path', '')
+        name = w.get('name', '')
+        p = Path(path).resolve() if path else Path('/')
+        # Skip test artifacts
+        if 'test-workspace' in path or 'webui-mvp-test' in path:
+            continue
+        # Skip paths that no longer exist
+        if not p.is_dir():
+            continue
+        # Skip paths inside a named profile's directory (cross-profile leak)
+        try:
+            p.relative_to(hermes_profiles)
+            continue  # it IS under profiles/ — remove it
+        except ValueError:
+            pass
+        # Rename confusing 'default' label to 'Home'
+        if name.lower() == 'default':
+            name = 'Home'
+        result.append({'path': str(p), 'name': name})
+    return result
+
+
+def _migrate_global_workspaces() -> list:
+    """Read the legacy global workspaces.json, clean it, and return the result.
+
+    This is the migration path for users upgrading from a pre-profile version:
+    their global file may contain cross-profile entries, test artifacts, and
+    stale paths accumulated over time.  We clean it in-place and rewrite it.
+    """
+    if not _GLOBAL_WS_FILE.exists():
+        return []
+    try:
+        raw = json.loads(_GLOBAL_WS_FILE.read_text(encoding='utf-8'))
+        cleaned = _clean_workspace_list(raw)
+        if len(cleaned) != len(raw):
+            # Rewrite the cleaned version so future reads are already clean
+            _GLOBAL_WS_FILE.write_text(
+                json.dumps(cleaned, ensure_ascii=False, indent=2), encoding='utf-8'
+            )
+        return cleaned
+    except Exception:
+        return []
+
+
 def load_workspaces() -> list:
     ws_file = _workspaces_file()
     if ws_file.exists():
         try:
-            return json.loads(ws_file.read_text(encoding='utf-8'))
+            raw = json.loads(ws_file.read_text(encoding='utf-8'))
+            cleaned = _clean_workspace_list(raw)
+            if len(cleaned) != len(raw):
+                # Persist the cleaned version so stale entries don't keep reappearing
+                try:
+                    ws_file.write_text(
+                        json.dumps(cleaned, ensure_ascii=False, indent=2), encoding='utf-8'
+                    )
+                except Exception:
+                    pass
+            return cleaned or [{'path': _profile_default_workspace(), 'name': 'Home'}]
         except Exception:
             pass
-    # Fallback: for the DEFAULT profile only, migrate from the legacy global file.
-    # Named profiles should start with a clean list, not inherit another profile's workspaces.
+    # No profile-local file yet.
+    # For the DEFAULT profile: migrate from the legacy global file (one-time cleanup).
+    # For NAMED profiles: always start clean with just their own workspace.
     try:
         from api.profiles import get_active_profile_name
         is_default = get_active_profile_name() in ('default', None)
     except ImportError:
         is_default = True
-    if is_default and _GLOBAL_WS_FILE.exists():
-        try:
-            return json.loads(_GLOBAL_WS_FILE.read_text(encoding='utf-8'))
-        except Exception:
-            pass
-    return [{'path': _profile_default_workspace(), 'name': 'default'}]
+    if is_default:
+        migrated = _migrate_global_workspaces()
+        if migrated:
+            return migrated
+    # Fresh start: single entry from the profile's configured workspace, labeled "Home"
+    return [{'path': _profile_default_workspace(), 'name': 'Home'}]
 
 
 def save_workspaces(workspaces: list):
