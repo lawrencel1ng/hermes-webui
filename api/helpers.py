@@ -6,14 +6,14 @@ from pathlib import Path
 from api.config import IMAGE_EXTS, MD_EXTS
 
 
-def require(body: dict, *fields):
+def require(body: dict, *fields) -> None:
     """Phase D: Validate required fields. Raises ValueError with clean message."""
     missing = [f for f in fields if not body.get(f) and body.get(f) != 0]
     if missing:
         raise ValueError(f"Missing required field(s): {', '.join(missing)}")
 
 
-def bad(handler, msg, status=400):
+def bad(handler, msg, status: int=400):
     """Return a clean JSON error response."""
     return j(handler, {'error': msg}, status=status)
 
@@ -32,7 +32,7 @@ def _security_headers(handler):
     handler.send_header('Referrer-Policy', 'same-origin')
 
 
-def j(handler, payload, status=200):
+def j(handler, payload, status: int=200) -> None:
     """Send a JSON response."""
     body = _json.dumps(payload, ensure_ascii=False, indent=2).encode('utf-8')
     handler.send_response(status)
@@ -44,7 +44,7 @@ def j(handler, payload, status=200):
     handler.wfile.write(body)
 
 
-def t(handler, payload, status=200, content_type='text/plain; charset=utf-8'):
+def t(handler, payload, status: int=200, content_type: str='text/plain; charset=utf-8') -> None:
     """Send a plain text or HTML response."""
     body = payload if isinstance(payload, bytes) else str(payload).encode('utf-8')
     handler.send_response(status)
@@ -59,7 +59,7 @@ def t(handler, payload, status=200, content_type='text/plain; charset=utf-8'):
 MAX_BODY_BYTES = 20 * 1024 * 1024  # 20MB limit for non-upload POST bodies
 
 
-def read_body(handler):
+def read_body(handler) -> dict:
     """Read and JSON-parse a POST request body (capped at 20MB)."""
     length = int(handler.headers.get('Content-Length', 0))
     if length > MAX_BODY_BYTES:

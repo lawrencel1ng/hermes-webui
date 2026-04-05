@@ -11,7 +11,7 @@ from api.models import get_session
 from api.workspace import safe_resolve_ws
 
 
-def parse_multipart(rfile, content_type, content_length):
+def parse_multipart(rfile, content_type, content_length) -> tuple:
     import re as _re, email.parser as _ep
     m = _re.search(r'boundary=([^;\s]+)', content_type)
     if not m:

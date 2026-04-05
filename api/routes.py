@@ -107,7 +107,7 @@ async function doLogin(e){
 
 # ── GET routes ────────────────────────────────────────────────────────────────
 
-def handle_get(handler, parsed):
+def handle_get(handler, parsed) -> bool:
     """Handle all GET routes. Returns True if handled, False for 404."""
 
     if parsed.path in ('/', '/index.html'):
@@ -318,7 +318,7 @@ def handle_get(handler, parsed):
 
 # ── POST routes ───────────────────────────────────────────────────────────────
 
-def handle_post(handler, parsed):
+def handle_post(handler, parsed) -> bool:
     """Handle all POST routes. Returns True if handled, False for 404."""
 
     if parsed.path == '/api/upload':

@@ -34,13 +34,13 @@ def _write_session_index():
 
 
 class Session:
-    def __init__(self, session_id=None, title='Untitled',
+    def __init__(self, session_id: int=None, title: str='Untitled',
                  workspace=str(DEFAULT_WORKSPACE), model=DEFAULT_MODEL,
                  messages=None, created_at=None, updated_at=None,
-                 tool_calls=None, pinned=False, archived=False,
-                 project_id=None, profile=None,
-                 input_tokens=0, output_tokens=0, estimated_cost=None,
-                 **kwargs):
+                 tool_calls=None, pinned: bool=False, archived: bool=False,
+                 project_id: int=None, profile=None,
+                 input_tokens: int=0, output_tokens: int=0, estimated_cost=None,
+                 **kwargs: dict):
         self.session_id = session_id or uuid.uuid4().hex[:12]
         self.title = title
         self.workspace = str(Path(workspace).expanduser().resolve())
@@ -61,7 +61,7 @@ class Session:
     def path(self):
         return SESSION_DIR / f'{self.session_id}.json'
 
-    def save(self):
+    def save(self) -> None:
         self.updated_at = time.time()
         self.path.write_text(
             json.dumps(self.__dict__, ensure_ascii=False, indent=2),
@@ -70,13 +70,13 @@ class Session:
         _write_session_index()
 
     @classmethod
-    def load(cls, sid):
+    def load(cls, sid) -> None:
         p = SESSION_DIR / f'{sid}.json'
         if not p.exists():
             return None
         return cls(**json.loads(p.read_text(encoding='utf-8')))
 
-    def compact(self):
+    def compact(self) -> dict:
         return {
             'session_id': self.session_id,
             'title': self.title,
@@ -165,7 +165,7 @@ def all_sessions():
     return result
 
 
-def title_from(messages, fallback='Untitled'):
+def title_from(messages, fallback: str='Untitled'):
     """Derive a session title from the first user message."""
     for m in messages:
         if m.get('role') == 'user':
@@ -180,7 +180,7 @@ def title_from(messages, fallback='Untitled'):
 
 # ── Project helpers ──────────────────────────────────────────────────────────
 
-def load_projects():
+def load_projects() -> list:
     """Load project list from disk. Returns list of project dicts."""
     if not PROJECTS_FILE.exists():
         return []
@@ -189,12 +189,12 @@ def load_projects():
     except Exception:
         return []
 
-def save_projects(projects):
+def save_projects(projects) -> None:
     """Write project list to disk."""
     PROJECTS_FILE.write_text(json.dumps(projects, ensure_ascii=False, indent=2), encoding='utf-8')
 
 
-def import_cli_session(session_id, title, messages, model='unknown', profile=None):
+def import_cli_session(session_id: int, title: str, messages, model: str='unknown', profile=None):
     """Create a new WebUI session populated with CLI messages.
     Returns the Session object.
     """
@@ -212,7 +212,7 @@ def import_cli_session(session_id, title, messages, model='unknown', profile=Non
 
 # ── CLI session bridge ──────────────────────────────────────────────────────
 
-def get_cli_sessions():
+def get_cli_sessions() -> list:
     """Read CLI sessions from the agent's SQLite store and return them as
     dicts in a format the WebUI sidebar can render alongside local sessions.
 
@@ -296,7 +296,7 @@ def get_cli_sessions():
     return cli_sessions
 
 
-def get_cli_session_messages(sid):
+def get_cli_session_messages(sid) -> list:
     """Read messages for a single CLI session from the SQLite store.
     Returns a list of {role, content, timestamp} dicts.
     Returns empty list on any error.
@@ -338,7 +338,7 @@ def get_cli_session_messages(sid):
     return msgs
 
 
-def delete_cli_session(sid):
+def delete_cli_session(sid) -> bool:
     """Delete a CLI session from state.db (messages + session row).
     Returns True if deleted, False if not found or error.
     """

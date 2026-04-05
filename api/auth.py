@@ -57,7 +57,7 @@ def _hash_password(password):
     return dk.hex()
 
 
-def get_password_hash():
+def get_password_hash() -> bool:
     """Return the active password hash, or None if auth is disabled.
     Priority: env var > settings.json."""
     env_pw = os.getenv('HERMES_WEBUI_PASSWORD', '').strip()
@@ -67,12 +67,12 @@ def get_password_hash():
     return settings.get('password_hash') or None
 
 
-def is_auth_enabled():
+def is_auth_enabled() -> bool:
     """True if a password is configured (env var or settings)."""
     return get_password_hash() is not None
 
 
-def verify_password(plain):
+def verify_password(plain) -> bool:
     """Verify a plaintext password against the stored hash."""
     expected = get_password_hash()
     if not expected:
@@ -80,7 +80,7 @@ def verify_password(plain):
     return hmac.compare_digest(_hash_password(plain), expected)
 
 
-def create_session():
+def create_session() -> str:
     """Create a new auth session. Returns signed cookie value."""
     token = secrets.token_hex(32)
     _sessions[token] = time.time() + SESSION_TTL
@@ -88,7 +88,7 @@ def create_session():
     return f"{token}.{sig}"
 
 
-def verify_session(cookie_value):
+def verify_session(cookie_value) -> bool:
     """Verify a signed session cookie. Returns True if valid and not expired."""
     if not cookie_value or '.' not in cookie_value:
         return False
@@ -103,14 +103,14 @@ def verify_session(cookie_value):
     return True
 
 
-def invalidate_session(cookie_value):
+def invalidate_session(cookie_value) -> None:
     """Remove a session token."""
     if cookie_value and '.' in cookie_value:
         token = cookie_value.rsplit('.', 1)[0]
         _sessions.pop(token, None)
 
 
-def parse_cookie(handler):
+def parse_cookie(handler) -> None:
     """Extract the auth cookie from the request headers."""
     cookie_header = handler.headers.get('Cookie', '')
     if not cookie_header:
@@ -124,7 +124,7 @@ def parse_cookie(handler):
     return morsel.value if morsel else None
 
 
-def check_auth(handler, parsed):
+def check_auth(handler, parsed) -> bool:
     """Check if request is authorized. Returns True if OK.
     If not authorized, sends 401 (API) or 302 redirect (page) and returns False."""
     if not is_auth_enabled():
@@ -149,7 +149,7 @@ def check_auth(handler, parsed):
     return False
 
 
-def set_auth_cookie(handler, cookie_value):
+def set_auth_cookie(handler, cookie_value) -> None:
     """Set the auth cookie on the response."""
     cookie = http.cookies.SimpleCookie()
     cookie[COOKIE_NAME] = cookie_value
@@ -160,7 +160,7 @@ def set_auth_cookie(handler, cookie_value):
     handler.send_header('Set-Cookie', cookie[COOKIE_NAME].OutputString())
 
 
-def clear_auth_cookie(handler):
+def clear_auth_cookie(handler) -> None:
     """Clear the auth cookie on the response."""
     cookie = http.cookies.SimpleCookie()
     cookie[COOKIE_NAME] = ''

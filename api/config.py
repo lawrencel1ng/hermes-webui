@@ -169,7 +169,7 @@ def get_config() -> dict:
         reload_config()
     return _cfg_cache
 
-def reload_config():
+def reload_config() -> None:
     """Reload config.yaml from the active profile's directory."""
     with _cfg_lock:
         _cfg_cache.clear()
@@ -208,7 +208,7 @@ DEFAULT_WORKSPACE = _discover_default_workspace()
 DEFAULT_MODEL     = os.getenv('HERMES_WEBUI_DEFAULT_MODEL', 'openai/gpt-5.4-mini')
 
 # ── Startup diagnostics ───────────────────────────────────────────────────────
-def print_startup_config():
+def print_startup_config() -> None:
     """Print detected configuration at startup so the user can verify what was found."""
     ok   = '\033[32m[ok]\033[0m'
     warn = '\033[33m[!!]\033[0m'
@@ -243,7 +243,7 @@ def print_startup_config():
             flush=True
         )
 
-def verify_hermes_imports():
+def verify_hermes_imports() -> tuple:
     """
     Attempt to import the key Hermes modules.
     Returns (ok: bool, missing: list[str], errors: dict[str, str]).
@@ -366,7 +366,7 @@ _PROVIDER_MODELS = {
 }
 
 
-def resolve_model_provider(model_id: str):
+def resolve_model_provider(model_id: str) -> tuple:
     """Resolve bare model name, provider, and base_url for AIAgent.
 
     Model IDs from the dropdown may include a provider prefix

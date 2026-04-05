@@ -18,7 +18,7 @@ class Handler(BaseHTTPRequestHandler):
     server_version = 'HermesWebUI/0.2'
     def log_message(self, fmt, *args): pass  # suppress default Apache-style log
 
-    def log_request(self, code='-', size='-'):
+    def log_request(self, code: str='-', size: str='-') -> None:
         """Structured JSON logs for each request."""
         import json as _json
         duration_ms = round((time.time() - getattr(self, '_req_t0', time.time())) * 1000, 1)
@@ -31,7 +31,7 @@ class Handler(BaseHTTPRequestHandler):
         })
         print(f'[webui] {record}', flush=True)
 
-    def do_GET(self):
+    def do_GET(self) -> None:
         self._req_t0 = time.time()
         try:
             parsed = urlparse(self.path)
@@ -43,7 +43,7 @@ class Handler(BaseHTTPRequestHandler):
             print(f'[webui] ERROR {self.command} {self.path}\n' + traceback.format_exc(), flush=True)
             return j(self, {'error': 'Internal server error'}, status=500)
 
-    def do_POST(self):
+    def do_POST(self) -> None:
         self._req_t0 = time.time()
         try:
             parsed = urlparse(self.path)
@@ -56,7 +56,7 @@ class Handler(BaseHTTPRequestHandler):
             return j(self, {'error': 'Internal server error'}, status=500)
 
 
-def main():
+def main() -> None:
     from api.config import print_startup_config, verify_hermes_imports, _HERMES_FOUND
 
     print_startup_config()

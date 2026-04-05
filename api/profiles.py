@@ -137,7 +137,7 @@ def _reload_dotenv(home: Path):
         pass
 
 
-def init_profile_state():
+def init_profile_state() -> None:
     """Initialize profile state at server startup.
 
     Reads ~/.hermes/active_profile, sets HERMES_HOME env var, patches

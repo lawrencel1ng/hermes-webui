@@ -43,7 +43,7 @@ def _get_state_db():
         return None
 
 
-def sync_session_start(session_id, model=None):
+def sync_session_start(session_id: int, model=None) -> None:
     """Register a WebUI session in state.db (idempotent).
     Called when a session's first message is sent.
     """
@@ -65,8 +65,8 @@ def sync_session_start(session_id, model=None):
             pass
 
 
-def sync_session_usage(session_id, input_tokens=0, output_tokens=0,
-                       estimated_cost=None, model=None, title=None):
+def sync_session_usage(session_id: int, input_tokens: int=0, output_tokens: int=0,
+                       estimated_cost=None, model=None, title: str=None) -> None:
     """Update token usage and title for a WebUI session in state.db.
     Called after each turn completes. Uses absolute=True to set totals
     (the WebUI Session already accumulates across turns).

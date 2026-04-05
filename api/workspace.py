@@ -176,7 +176,7 @@ def load_workspaces() -> list:
     return [{'path': _profile_default_workspace(), 'name': 'Home'}]
 
 
-def save_workspaces(workspaces: list):
+def save_workspaces(workspaces: list) -> None:
     ws_file = _workspaces_file()
     ws_file.parent.mkdir(parents=True, exist_ok=True)
     ws_file.write_text(json.dumps(workspaces, ensure_ascii=False, indent=2), encoding='utf-8')
@@ -202,7 +202,7 @@ def get_last_workspace() -> str:
     return _profile_default_workspace()
 
 
-def set_last_workspace(path: str):
+def set_last_workspace(path: str) -> None:
     try:
         lw_file = _last_workspace_file()
         lw_file.parent.mkdir(parents=True, exist_ok=True)
@@ -218,7 +218,7 @@ def safe_resolve_ws(root: Path, requested: str) -> Path:
     return resolved
 
 
-def list_dir(workspace: Path, rel='.'):
+def list_dir(workspace: Path, rel: str='.'):
     target = safe_resolve_ws(workspace, rel)
     if not target.is_dir():
         raise FileNotFoundError(f"Not a directory: {rel}")
@@ -235,7 +235,7 @@ def list_dir(workspace: Path, rel='.'):
     return entries
 
 
-def read_file_content(workspace: Path, rel: str):
+def read_file_content(workspace: Path, rel: str) -> dict:
     target = safe_resolve_ws(workspace, rel)
     if not target.is_file():
         raise FileNotFoundError(f"Not a file: {rel}")
