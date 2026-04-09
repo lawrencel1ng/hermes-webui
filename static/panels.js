@@ -975,6 +975,8 @@ function _markSettingsDirty(){
 async function loadSettingsPanel(){
   try{
     const settings=await api('/api/settings');
+    // Apply server-persisted locale immediately (overrides localStorage boot default)
+    if(settings.language && typeof setLocale==='function') setLocale(settings.language);
     // Populate model dropdown from /api/models
     const modelSel=$('settingsModel');
     if(modelSel){
@@ -1001,6 +1003,20 @@ async function loadSettingsPanel(){
     // Theme preference
     const themeSel=$('settingsTheme');
     if(themeSel){themeSel.value=settings.theme||'dark';themeSel.addEventListener('change',_markSettingsDirty,{once:false});}
+    // Language preference — populate from LOCALES bundle
+    const langSel=$('settingsLanguage');
+    if(langSel){
+      langSel.innerHTML='';
+      if(typeof LOCALES!=='undefined'){
+        for(const [code,bundle] of Object.entries(LOCALES)){
+          const opt=document.createElement('option');
+          opt.value=code;opt.textContent=bundle._label||code;
+          langSel.appendChild(opt);
+        }
+      }
+      langSel.value=settings.language||'en';
+      langSel.addEventListener('change',_markSettingsDirty,{once:false});
+    }
     const showUsageCb=$('settingsShowTokenUsage');
     if(showUsageCb){showUsageCb.checked=!!settings.show_token_usage;showUsageCb.addEventListener('change',_markSettingsDirty,{once:false});}
     const showCliCb=$('settingsShowCliSessions');
@@ -1029,7 +1045,7 @@ async function loadSettingsPanel(){
       if(disableBtn) disableBtn.style.display=active?'':'none';
     }catch(e){}
   }catch(e){
-    showToast('Failed to load settings: '+e.message);
+    showToast(t('settings_load_failed')+e.message);
   }
 }
 
@@ -1040,11 +1056,13 @@ async function saveSettings(andClose){
   const showCliSessions=!!($('settingsShowCliSessions')||{}).checked;
   const pw=($('settingsPassword')||{}).value;
   const theme=($('settingsTheme')||{}).value||'dark';
+  const language=($('settingsLanguage')||{}).value||'en';
   const body={};
   if(model) body.default_model=model;
 
   if(sendKey) body.send_key=sendKey;
   body.theme=theme;
+  body.language=language;
   body.show_token_usage=showTokenUsage;
   body.show_cli_sessions=showCliSessions;
   body.sync_to_insights=!!($('settingsSyncInsights')||{}).checked;
@@ -1061,7 +1079,9 @@ async function saveSettings(andClose){
       window._showTokenUsage=showTokenUsage;
       window._soundEnabled=body.sound_enabled;
       window._notificationsEnabled=body.notifications_enabled;
-      showToast('Settings saved (password set — login now required)');
+      if(typeof setLocale==='function') setLocale(language);
+      if(typeof applyLocaleToDOM==='function') applyLocaleToDOM();
+      showToast(t('settings_saved_pw'));
       _settingsDirty=false; _settingsThemeOnOpen=theme;
       const bar=$('settingsUnsavedBar'); if(bar) bar.style.display='none';
       $('settingsOverlay').style.display='none';
@@ -1077,14 +1097,17 @@ async function saveSettings(andClose){
     window._notificationsEnabled=body.notifications_enabled;
     window._botName=body.bot_name;
     if(typeof applyBotName==='function') applyBotName();
+    if(typeof setLocale==='function') setLocale(language);
+    if(typeof applyLocaleToDOM==='function') applyLocaleToDOM();
     _settingsDirty=false; _settingsThemeOnOpen=theme;
     const bar=$('settingsUnsavedBar'); if(bar) bar.style.display='none';
     renderMessages();
+    if(typeof syncTopbar==='function') syncTopbar();
     if(typeof renderSessionList==='function') renderSessionList();
-    showToast('Settings saved');
+    showToast(t('settings_saved'));
     $('settingsOverlay').style.display='none';
   }catch(e){
-    showToast('Save failed: '+e.message);
+    showToast(t('settings_save_failed')+e.message);
   }
 }
 

@@ -72,10 +72,28 @@ except ImportError:
     _permanent_approved = set()
 
 
+# ── Login page locale strings ─────────────────────────────────────────────────
+# Add entries here to support more languages on the login page.
+# The key must match the 'language' setting value (from static/i18n.js LOCALES).
+_LOGIN_LOCALE = {
+    'en': {
+        'lang': 'en', 'title': 'Sign in',
+        'subtitle': 'Enter your password to continue',
+        'placeholder': 'Password', 'btn': 'Sign in',
+        'invalid_pw': 'Invalid password', 'conn_failed': 'Connection failed',
+    },
+    'zh': {
+        'lang': 'zh-CN', 'title': '\u767b\u5f55',
+        'subtitle': '\u8f93\u5165\u5bc6\u7801\u7ee7\u7eed\u4f7f\u7528',
+        'placeholder': '\u5bc6\u7801', 'btn': '\u767b\u5f55',
+        'invalid_pw': '\u5bc6\u7801\u9519\u8bef', 'conn_failed': '\u8fde\u63a5\u5931\u8d25',
+    },
+}
+
 # ── Login page (self-contained, no external deps) ────────────────────────────
 _LOGIN_PAGE_HTML = '''<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{{BOT_NAME}} — Sign in</title>
+<html lang="{{LANG}}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{BOT_NAME}} — {{LOGIN_TITLE}}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#1a1a2e;color:#e8e8f0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
@@ -100,11 +118,11 @@ button:hover{background:rgba(124,185,255,.25)}
 <div class="card">
   <div class="logo">{{BOT_NAME_INITIAL}}</div>
   <h1>{{BOT_NAME}}</h1>
-  <p class="sub">Enter your password to continue</p>
+  <p class="sub">{{LOGIN_SUBTITLE}}</p>
   <form onsubmit="doLogin(event);return false">
-    <input type="password" id="pw" placeholder="Password" autofocus
+    <input type="password" id="pw" placeholder="{{LOGIN_PLACEHOLDER}}" autofocus
            onkeydown="if(event.key==='Enter'){doLogin(event);event.preventDefault();}">
-    <button type="submit">Sign in</button>
+    <button type="submit">{{LOGIN_BTN}}</button>
   </form>
   <div class="err" id="err"></div>
 </div>
@@ -120,8 +138,8 @@ async function doLogin(e){
       body:JSON.stringify({password:pw}),credentials:'include'});
     const data=await res.json();
     if(res.ok&&data.ok){window.location.href='/';}
-    else{err.textContent=data.error||'Invalid password';err.style.display='block';}
-  }catch(ex){err.textContent='Connection failed';err.style.display='block';}
+    else{err.textContent=data.error||'{{LOGIN_INVALID_PW}}';err.style.display='block';}
+  }catch(ex){err.textContent='{{LOGIN_CONN_FAILED}}';err.style.display='block';}
 }
 </script></body></html>'''
 
@@ -135,8 +153,22 @@ def handle_get(handler, parsed) -> bool:
                  content_type='text/html; charset=utf-8')
 
     if parsed.path == '/login':
-        _bn = _html.escape(load_settings().get('bot_name') or 'Hermes')
-        _page = _LOGIN_PAGE_HTML.replace('{{BOT_NAME}}', _bn).replace('{{BOT_NAME_INITIAL}}', _bn[0].upper())
+        _settings = load_settings()
+        _bn = _html.escape(_settings.get('bot_name') or 'Hermes')
+        _lang = _settings.get('language', 'en')
+        _login_strings = _LOGIN_LOCALE.get(_lang, _LOGIN_LOCALE['en'])
+        _page = (
+            _LOGIN_PAGE_HTML
+            .replace('{{BOT_NAME}}', _bn)
+            .replace('{{BOT_NAME_INITIAL}}', _bn[0].upper())
+            .replace('{{LANG}}', _html.escape(_login_strings['lang']))
+            .replace('{{LOGIN_TITLE}}', _html.escape(_login_strings['title']))
+            .replace('{{LOGIN_SUBTITLE}}', _html.escape(_login_strings['subtitle']))
+            .replace('{{LOGIN_PLACEHOLDER}}', _html.escape(_login_strings['placeholder']))
+            .replace('{{LOGIN_BTN}}', _html.escape(_login_strings['btn']))
+            .replace('{{LOGIN_INVALID_PW}}', _login_strings['invalid_pw'])  # JS string, escape carefully
+            .replace('{{LOGIN_CONN_FAILED}}', _login_strings['conn_failed'])
+        )
         return t(handler, _page, content_type='text/html; charset=utf-8')
 
     if parsed.path == '/api/auth/status':

@@ -3,15 +3,15 @@
 // (no round-trip to the agent) and shows feedback via toast or local message.
 
 const COMMANDS=[
-  {name:'help',      desc:'List available commands',             fn:cmdHelp},
-  {name:'clear',     desc:'Clear conversation messages',         fn:cmdClear},
-  {name:'compact',   desc:'Compress conversation context',       fn:cmdCompact},
-  {name:'model',     desc:'Switch model (e.g. /model gpt-4o)',  fn:cmdModel,     arg:'model_name'},
-  {name:'workspace', desc:'Switch workspace by name',            fn:cmdWorkspace, arg:'name'},
-  {name:'new',       desc:'Start a new chat session',            fn:cmdNew},
-  {name:'usage',     desc:'Toggle token usage display on/off',   fn:cmdUsage},
-  {name:'theme',     desc:'Switch theme (dark/light/slate/solarized/monokai/nord/oled)', fn:cmdTheme, arg:'name'},
-  {name:'personality', desc:'Switch agent personality', fn:cmdPersonality, arg:'name'},
+  {name:'help',      desc:t('cmd_help'),             fn:cmdHelp},
+  {name:'clear',     desc:t('cmd_clear'),         fn:cmdClear},
+  {name:'compact',   desc:t('cmd_compact'),       fn:cmdCompact},
+  {name:'model',     desc:t('cmd_model'),  fn:cmdModel,     arg:'model_name'},
+  {name:'workspace', desc:t('cmd_workspace'),            fn:cmdWorkspace, arg:'name'},
+  {name:'new',       desc:t('cmd_new'),            fn:cmdNew},
+  {name:'usage',     desc:t('cmd_usage'),   fn:cmdUsage},
+  {name:'theme',     desc:t('cmd_theme'), fn:cmdTheme, arg:'name'},
+  {name:'personality', desc:t('cmd_personality'), fn:cmdPersonality, arg:'name'},
 ];
 
 function parseCommand(text){
@@ -43,10 +43,10 @@ function cmdHelp(){
     const usage=c.arg?` <${c.arg}>`:'';
     return `  /${c.name}${usage} — ${c.desc}`;
   });
-  const msg={role:'assistant',content:'**Available commands:**\n'+lines.join('\n')};
+  const msg={role:'assistant',content:t('available_commands')+'\n'+lines.join('\n')};
   S.messages.push(msg);
   renderMessages();
-  showToast('Type / to see commands');
+  showToast(t('type_slash'));
 }
 
 function cmdClear(){
@@ -55,11 +55,11 @@ function cmdClear(){
   clearLiveToolCards();
   renderMessages();
   $('emptyState').style.display='';
-  showToast('Conversation cleared');
+  showToast(t('conversation_cleared'));
 }
 
 async function cmdModel(args){
-  if(!args){showToast('Usage: /model <name>');return;}
+  if(!args){showToast(t('model_usage'));return;}
   const sel=$('modelSelect');
   if(!sel)return;
   const q=args.toLowerCase();
@@ -70,36 +70,36 @@ async function cmdModel(args){
       match=opt.value;break;
     }
   }
-  if(!match){showToast(`No model matching "${args}"`);return;}
+  if(!match){showToast(t('no_model_match')+`"${args}"`);return;}
   sel.value=match;
   await sel.onchange();
-  showToast(`Switched to ${match}`);
+  showToast(t('switched_to')+match);
 }
 
 async function cmdWorkspace(args){
-  if(!args){showToast('Usage: /workspace <name>');return;}
+  if(!args){showToast(t('workspace_usage'));return;}
   try{
     const data=await api('/api/workspaces');
     const q=args.toLowerCase();
     const ws=(data.workspaces||[]).find(w=>
       (w.name||'').toLowerCase().includes(q)||w.path.toLowerCase().includes(q)
     );
-    if(!ws){showToast(`No workspace matching "${args}"`);return;}
+    if(!ws){showToast(t('no_workspace_match')+`"${args}"`);return;}
     if(!S.session)return;
     await api('/api/session/update',{method:'POST',body:JSON.stringify({
       session_id:S.session.session_id,workspace:ws.path,model:S.session.model
     })});
     S.session.workspace=ws.path;
     syncTopbar();await loadDir('.');
-    showToast(`Switched to workspace: ${ws.name||ws.path}`);
-  }catch(e){showToast('Workspace switch failed: '+e.message);}
+    showToast(t('switched_workspace')+(ws.name||ws.path));
+  }catch(e){showToast(t('workspace_switch_failed')+e.message);}
 }
 
 async function cmdNew(){
   await newSession();
   await renderSessionList();
   $('msg').focus();
-  showToast('New session created');
+  showToast(t('new_session'));
 }
 
 function cmdCompact(){
@@ -108,7 +108,7 @@ function cmdCompact(){
   // We send a user message so it appears in the conversation.
   $('msg').value='Please compress and summarize the conversation context to free up space.';
   send();
-  showToast('Requesting context compression...');
+  showToast(t('compressing'));
 }
 
 async function cmdUsage(){
@@ -121,53 +121,53 @@ async function cmdUsage(){
   const cb=$('settingsShowTokenUsage');
   if(cb) cb.checked=next;
   renderMessages();
-  showToast('Token usage '+(next?'on':'off'));
+  showToast(next?t('token_usage_on'):t('token_usage_off'));
 }
 
 async function cmdTheme(args){
   const themes=['dark','light','slate','solarized','monokai','nord','oled'];
   if(!args||!themes.includes(args.toLowerCase())){
-    showToast('Usage: /theme '+themes.join('|'));
+    showToast(t('theme_usage')+themes.join('|'));
     return;
   }
-  const t=args.toLowerCase();
-  document.documentElement.dataset.theme=t;
-  localStorage.setItem('hermes-theme',t);
-  try{await api('/api/settings',{method:'POST',body:JSON.stringify({theme:t})});}catch(e){}
+  const themeName=args.toLowerCase();
+  document.documentElement.dataset.theme=themeName;
+  localStorage.setItem('hermes-theme',themeName);
+  try{await api('/api/settings',{method:'POST',body:JSON.stringify({theme:themeName})});}catch(e){}
   // Update settings dropdown if panel is open
   const sel=$('settingsTheme');
-  if(sel)sel.value=t;
-  showToast('Theme: '+t);
+  if(sel)sel.value=themeName;
+  showToast(t('theme_set')+themeName);
 }
 
 async function cmdPersonality(args){
-  if(!S.session){showToast('No active session');return;}
+  if(!S.session){showToast(t('no_active_session'));return;}
   if(!args){
     // List available personalities
     try{
       const data=await api('/api/personalities');
       if(!data.personalities||!data.personalities.length){
-        showToast('No personalities found (add them to ~/.hermes/personalities/)');
+        showToast(t('no_personalities'));
         return;
       }
       const list=data.personalities.map(p=>`  **${p.name}**${p.description?' — '+p.description:''}`).join('\n');
-      S.messages.push({role:'assistant',content:'Available personalities:\n\n'+list+'\n\nUse `/personality <name>` to switch, or `/personality none` to clear.'});
+      S.messages.push({role:'assistant',content:t('available_personalities')+'\n\n'+list+t('personality_switch_hint')});
       renderMessages();
-    }catch(e){showToast('Failed to load personalities');}
+    }catch(e){showToast(t('personalities_load_failed'));}
     return;
   }
   const name=args.trim();
   if(name.toLowerCase()==='none'||name.toLowerCase()==='default'||name.toLowerCase()==='clear'){
     try{
       await api('/api/personality/set',{method:'POST',body:JSON.stringify({session_id:S.session.session_id,name:''})});
-      showToast('Personality cleared');
-    }catch(e){showToast('Failed: '+e.message);}
+      showToast(t('personality_cleared'));
+    }catch(e){showToast(t('failed_colon')+e.message);}
     return;
   }
   try{
     const res=await api('/api/personality/set',{method:'POST',body:JSON.stringify({session_id:S.session.session_id,name})});
-    showToast('Personality: '+name);
-  }catch(e){showToast('Failed: '+e.message);}
+    showToast(t('personality_set')+name);
+  }catch(e){showToast(t('failed_colon')+e.message);}
 }
 
 // ── Autocomplete dropdown ───────────────────────────────────────────────────

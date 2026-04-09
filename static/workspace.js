@@ -54,7 +54,7 @@ async function loadDir(path){
     }
     if(typeof clearPreview==='function'){
       if(typeof _previewDirty!=='undefined'&&_previewDirty){
-        if(confirm('You have unsaved changes in the preview. Discard and navigate?'))clearPreview();
+        if(confirm(t('unsaved_confirm')))clearPreview();
       }else{
         clearPreview();
       }
@@ -131,8 +131,8 @@ function updateEditBtn(){
   const editable = _previewCurrentMode==='code'||_previewCurrentMode==='md';
   btn.style.display = editable?'':'none';
   const editing = $('previewEditArea').style.display!=='none';
-  btn.innerHTML = editing ? '&#128190; Save' : '&#9998; Edit';
-  btn.title = editing ? 'Save changes' : 'Edit this file';
+  btn.innerHTML = editing ? `&#128190; ${t('save')}` : `&#9998; ${t('edit')}`;
+  btn.title = editing ? t('save_title') : t('edit_title');
   btn.style.color = editing ? 'var(--blue)' : '';
   if(_previewDirty) btn.innerHTML = '&#128190; Save*';
 }
@@ -154,8 +154,8 @@ async function toggleEditMode(){
       $('previewEditArea').style.display='none';
       if(_previewCurrentMode==='code') $('previewCode').style.display='';
       else $('previewMd').style.display='';
-      showToast('Saved');
-    }catch(e){setStatus('Save failed: '+e.message);}
+      showToast(t('saved'));
+    }catch(e){setStatus(t('save_failed')+e.message);}
   }else{
     // Enter edit mode: populate textarea with current content
     const currentText = _previewCurrentMode==='code'
@@ -206,7 +206,7 @@ async function openFile(path){
     const url=`/api/file/raw?session_id=${encodeURIComponent(S.session.session_id)}&path=${encodeURIComponent(path)}`;
     $('previewImg').alt=path;
     $('previewImg').src=url;
-    $('previewImg').onerror=()=>setStatus('Could not load image');
+    $('previewImg').onerror=()=>setStatus(t('image_load_failed'));
   } else if(MD_EXTS.has(ext)){
     // Markdown: fetch text, render with renderMd, display as formatted HTML
     try{
@@ -214,7 +214,7 @@ async function openFile(path){
       showPreview('md');
       _previewRawContent = data.content;
       $('previewMd').innerHTML=renderMd(data.content);
-    }catch(e){setStatus('Could not open file');}
+    }catch(e){setStatus(t('file_open_failed'));}
   } else {
     // Plain code / text -- but fall back to download if server signals binary
     try{
@@ -242,6 +242,6 @@ function downloadFile(path){
   a.href=url;a.download=filename;
   document.body.appendChild(a);a.click();
   setTimeout(()=>document.body.removeChild(a),100);
-  showToast(`Downloading ${filename}\u2026`,2000);
+  showToast(t('downloading',filename),2000);
 }
 

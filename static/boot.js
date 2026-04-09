@@ -4,8 +4,8 @@ async function cancelStream(){
   try{
     await fetch(new URL(`/api/chat/cancel?stream_id=${encodeURIComponent(streamId)}`,location.origin).href,{credentials:'include'});
     const btn=$('btnCancel');if(btn)btn.style.display='none';
-    setStatus('Cancelling…');
-  }catch(e){setStatus('Cancel failed: '+e.message);}
+    setStatus(t('cancelling'));
+  }catch(e){setStatus(t('cancel_failed')+e.message);}
 }
 
 // ── Mobile navigation ──────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ $('btnAttach').onclick=()=>$('fileInput').click();
   const recognition=new SpeechRecognition();
   recognition.continuous=false;
   recognition.interimResults=true;
-  recognition.lang='en-US';
+  recognition.lang=(typeof _locale!=='undefined'&&_locale._speech)||'en-US';
 
   let _finalText='';
   let _prefix='';
@@ -108,11 +108,11 @@ $('btnAttach').onclick=()=>$('fileInput').click();
   recognition.onerror=(event)=>{
     _setRecording(false);
     const msgs={
-      'not-allowed':'Microphone access denied. Check browser permissions.',
-      'no-speech':'No speech detected. Try again.',
-      'network':'Speech recognition unavailable.',
+      'not-allowed':t('mic_denied'),
+      'no-speech':t('mic_no_speech'),
+      'network':t('mic_network'),
     };
-    showToast(msgs[event.error]||'Voice input error: '+event.error);
+    showToast(msgs[event.error]||t('mic_error')+event.error);
   };
 
   function _stopMic(){
@@ -160,10 +160,10 @@ $('importFileInput').onchange=async(e)=>{
     if(res.ok&&res.session){
       await loadSession(res.session.session_id);
       await renderSessionList();
-      showToast('Session imported');
+      showToast(t('session_imported'));
     }
   }catch(err){
-    showToast('Import failed: '+(err.message||'Invalid JSON'));
+    showToast(t('import_failed')+(err.message||t('import_invalid_json')));
   }
 };
 // btnRefreshFiles is now panel-icon-btn in header (see HTML)
@@ -251,7 +251,7 @@ $('msg').addEventListener('paste',e=>{
     return new File([blob],`screenshot-${Date.now()}.${ext}`,{type:i.type});
   });
   addFiles(files);
-  setStatus(`Image pasted: ${files.map(f=>f.name).join(', ')}`);
+  setStatus(t('image_pasted')+files.map(f=>f.name).join(', '));
 });
 document.querySelectorAll('.suggestion').forEach(btn=>{
   btn.onclick=()=>{$('msg').value=btn.dataset.msg;send();};
@@ -322,7 +322,7 @@ function applyBotName(){
 (async()=>{
   // Load send key preference
   let _bootSettings={};
-  try{const s=await api('/api/settings');_bootSettings=s;window._sendKey=s.send_key||'enter';window._showTokenUsage=!!s.show_token_usage;window._showCliSessions=!!s.show_cli_sessions;window._soundEnabled=!!s.sound_enabled;window._notificationsEnabled=!!s.notifications_enabled;window._botName=s.bot_name||'Hermes';const _theme=s.theme||'dark';document.documentElement.dataset.theme=_theme;localStorage.setItem('hermes-theme',_theme);applyBotName();}catch(e){window._sendKey='enter';window._showTokenUsage=false;window._showCliSessions=false;window._soundEnabled=false;window._notificationsEnabled=false;window._botName='Hermes';_bootSettings={check_for_updates:false};}
+  try{const s=await api('/api/settings');_bootSettings=s;window._sendKey=s.send_key||'enter';window._showTokenUsage=!!s.show_token_usage;window._showCliSessions=!!s.show_cli_sessions;window._soundEnabled=!!s.sound_enabled;window._notificationsEnabled=!!s.notifications_enabled;window._botName=s.bot_name||'Hermes';const _theme=s.theme||'dark';document.documentElement.dataset.theme=_theme;localStorage.setItem('hermes-theme',_theme);if(s.language&&typeof setLocale==='function'){setLocale(s.language);if(typeof applyLocaleToDOM==='function')applyLocaleToDOM();}applyBotName();}catch(e){window._sendKey='enter';window._showTokenUsage=false;window._showCliSessions=false;window._soundEnabled=false;window._notificationsEnabled=false;window._botName='Hermes';_bootSettings={check_for_updates:false};}
   // Non-blocking update check (fire-and-forget, once per tab session)
   // ?test_updates=1 in URL forces banner display for testing (bypasses sessionStorage guards)
   const _testUpdates=new URLSearchParams(location.search).get('test_updates')==='1';

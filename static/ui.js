@@ -387,12 +387,12 @@ async function checkInflightOnBoot(sid) {
     const status = await api(`/api/chat/stream/status?stream_id=${encodeURIComponent(streamId || '')}`);
     if (status.active) {
       // Stream is genuinely still running -- show the banner
-      showReconnectBanner('A response is still being generated. Reload when ready?');
+      showReconnectBanner(t('reconnect_active'));
     } else {
       // Stream finished. Only show banner if reload happened within 90 seconds
       // (longer gap = normal completed session, not a mid-stream reload)
       if (Date.now() - ts < 90 * 1000) {
-        showReconnectBanner('A response was in progress when you last left. Messages may have updated.');
+        showReconnectBanner(t('reconnect_finished'));
       } else {
         clearInflight();  // completed normally, no banner needed
       }
@@ -406,15 +406,15 @@ function syncTopbar(){
     // Show default workspace name even without a session
     const sidebarName=$('sidebarWsName');
     if(sidebarName && sidebarName.textContent==='Workspace'){
-      sidebarName.textContent='No workspace';
+      sidebarName.textContent=t('no_workspace');
     }
     return;
   }
-  const sessionTitle=S.session.title||'Untitled';
+  const sessionTitle=S.session.title||t('untitled');
   $('topbarTitle').textContent=sessionTitle;
   document.title=sessionTitle+' \u2014 '+(window._botName||'Hermes');
   const vis=S.messages.filter(m=>m&&m.role&&m.role!=='tool');
-  $('topbarMeta').textContent=`${vis.length} messages`;
+  $('topbarMeta').textContent=t('n_messages',vis.length);
   // If a profile switch just happened, apply its model rather than the session's stale value.
   // S._pendingProfileModel is set by switchToProfile() and cleared here after one application.
   const modelOverride=S._pendingProfileModel;
@@ -431,9 +431,9 @@ function syncTopbar(){
     if(!applied && m){
       const opt=document.createElement('option');
       opt.value=m;
-      opt.textContent=getModelLabel(m)+' (unavailable)';
+      opt.textContent=getModelLabel(m)+t('model_unavailable');
       opt.style.color='var(--muted, #888)';
-      opt.title='This model is no longer in your current provider list';
+      opt.title=t('model_unavailable_title');
       $('modelSelect').appendChild(opt);
       $('modelSelect').value=m;
     }
@@ -524,7 +524,7 @@ function renderMessages(){
     // Render thinking card before the assistant message (collapsed by default)
     if(thinkingText&&!isUser){
       const thinkRow=document.createElement('div');thinkRow.className='msg-row thinking-card-row';
-      thinkRow.innerHTML=`<div class="thinking-card"><div class="thinking-card-header" onclick="this.parentElement.classList.toggle('open')"><span class="thinking-card-icon">&#128161;</span><span class="thinking-card-label">Thinking</span><span class="thinking-card-toggle">&#9656;</span></div><div class="thinking-card-body"><pre>${esc(thinkingText)}</pre></div></div>`;
+      thinkRow.innerHTML=`<div class="thinking-card"><div class="thinking-card-header" onclick="this.parentElement.classList.toggle('open')"><span class="thinking-card-icon">&#128161;</span><span class="thinking-card-label">${t('thinking')}</span><span class="thinking-card-toggle">&#9656;</span></div><div class="thinking-card-body"><pre>${esc(thinkingText)}</pre></div></div>`;
       inner.appendChild(thinkRow);
     }
     const row=document.createElement('div');row.className='msg-row';
@@ -534,12 +534,12 @@ function renderMessages(){
       filesHtml=`<div class="msg-files">${m.attachments.map(f=>`<div class="msg-file-badge">&#128206; ${esc(f)}</div>`).join('')}</div>`;
     const bodyHtml = isUser ? esc(String(content)).replace(/\n/g,'<br>') : renderMd(String(content));
     // Action buttons for this bubble
-    const editBtn  = isUser  ? `<button class="msg-action-btn" title="Edit message" onclick="editMessage(this)">&#9998;</button>` : '';
-    const retryBtn = isLastAssistant ? `<button class="msg-action-btn" title="Regenerate response" onclick="regenerateResponse(this)">&#8635;</button>` : '';
+    const editBtn  = isUser  ? `<button class="msg-action-btn" title="${t('edit_message')}" onclick="editMessage(this)">&#9998;</button>` : '';
+    const retryBtn = isLastAssistant ? `<button class="msg-action-btn" title="${t('regenerate')}" onclick="regenerateResponse(this)">&#8635;</button>` : '';
     const tsVal=m._ts||m.timestamp;
     const tsTitle=tsVal?new Date(tsVal*1000).toLocaleString():'';
     const _bn=window._botName||'Hermes';
-    row.innerHTML=`<div class="msg-role ${m.role}" ${tsTitle?`title="${esc(tsTitle)}"`:''}><div class="role-icon ${m.role}">${isUser?'Y':esc(_bn.charAt(0).toUpperCase())}</div><span style="font-size:12px">${isUser?'You':esc(_bn)}</span>${tsTitle?`<span class="msg-time">${new Date(tsVal*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>`:''}<span class="msg-actions">${editBtn}<button class="msg-copy-btn msg-action-btn" title="Copy" onclick="copyMsg(this)">&#128203;</button>${retryBtn}</span></div>${filesHtml}<div class="msg-body">${bodyHtml}</div>`;
+    row.innerHTML=`<div class="msg-role ${m.role}" ${tsTitle?`title="${esc(tsTitle)}"`:''}}><div class="role-icon ${m.role}">${isUser?'Y':esc(_bn.charAt(0).toUpperCase())}</div><span style="font-size:12px">${isUser?t('you'):esc(_bn)}</span>${tsTitle?`<span class="msg-time">${new Date(tsVal*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>`:''}<span class="msg-actions">${editBtn}<button class="msg-copy-btn msg-action-btn" title="${t('copy')}" onclick="copyMsg(this)">&#128203;</button>${retryBtn}</span></div>${filesHtml}<div class="msg-body">${bodyHtml}</div>`;
     row.dataset.rawText = String(content).trim();
     inner.appendChild(row);
   }
@@ -617,10 +617,10 @@ function renderMessages(){
         // Collect card elements before they get moved to DOM
         const cardEls=Array.from(frag.querySelectorAll('.tool-card'));
         const expandBtn=document.createElement('button');
-        expandBtn.textContent='Expand all';
+        expandBtn.textContent=t('expand_all');
         expandBtn.onclick=()=>cardEls.forEach(c=>c.classList.add('open'));
         const collapseBtn=document.createElement('button');
-        collapseBtn.textContent='Collapse all';
+        collapseBtn.textContent=t('collapse_all');
         collapseBtn.onclick=()=>cardEls.forEach(c=>c.classList.remove('open'));
         toggle.appendChild(expandBtn);
         toggle.appendChild(collapseBtn);
@@ -807,7 +807,7 @@ async function submitEdit(msgIdx, newText) {
     // Now send the edited message as a new chat
     $('msg').value = newText;
     await send();
-  } catch(e) { setStatus('Edit failed: ' + e.message); }
+  } catch(e) { setStatus(t('edit_failed') + e.message); }
 }
 
 async function regenerateResponse(btn) {
@@ -833,7 +833,7 @@ async function regenerateResponse(btn) {
     renderMessages();
     $('msg').value = lastUserText;
     await send();
-  } catch(e) { setStatus('Regenerate failed: ' + e.message); }
+  } catch(e) { setStatus(t('regen_failed') + e.message); }
 }
 
 function highlightCode(container) {
@@ -852,12 +852,12 @@ function addCopyButtons(container){
     if(pre.querySelector('.code-copy-btn')) return;
     const btn=document.createElement('button');
     btn.className='code-copy-btn';
-    btn.textContent='Copy';
+    btn.textContent=t('copy');
     btn.onclick=(e)=>{
       e.stopPropagation();
       navigator.clipboard.writeText(codeEl.textContent).then(()=>{
-        btn.textContent='Copied!';
-        setTimeout(()=>{btn.textContent='Copy';},1500);
+        btn.textContent=t('copied');
+        setTimeout(()=>{btn.textContent=t('copy');},1500);
       });
     };
     const header=pre.previousElementSibling;
@@ -1010,7 +1010,7 @@ function _renderTreeItems(container, entries, depth){
 
     // Name
     const nameEl=document.createElement('span');
-    nameEl.className='file-name';nameEl.textContent=item.name;nameEl.title='Double-click to rename';
+    nameEl.className='file-name';nameEl.textContent=item.name;nameEl.title=t('double_click_rename');
     nameEl.ondblclick=(e)=>{
       e.stopPropagation();
       // For directories, double-click navigates (breadcrumb view)
@@ -1027,11 +1027,11 @@ function _renderTreeItems(container, entries, depth){
               await api('/api/file/rename',{method:'POST',body:JSON.stringify({
                 session_id:S.session.session_id,path:item.path,new_name:newName
               })});
-              showToast(`Renamed to ${newName}`);
+              showToast(t('renamed_to')+newName);
               // Invalidate cache and re-render
               delete S._dirCache[S.currentDir];
               await loadDir(S.currentDir);
-            }catch(err){showToast('Rename failed: '+err.message);}
+            }catch(err){showToast(t('rename_failed')+err.message);}
           }
         }
         inp.replaceWith(nameEl);
@@ -1057,7 +1057,7 @@ function _renderTreeItems(container, entries, depth){
     // Delete button -- for files
     if(item.type==='file'){
       const del=document.createElement('button');
-      del.className='file-del-btn';del.title='Delete';del.textContent='\u00d7';
+      del.className='file-del-btn';del.title=t('delete_title');del.textContent='\u00d7';
       del.onclick=async(e)=>{e.stopPropagation();await deleteWorkspaceFile(item.path,item.name);};
       el.appendChild(del);
     }
@@ -1098,7 +1098,7 @@ function _renderTreeItems(container, entries, depth){
         const empty=document.createElement('div');
         empty.className='file-item file-empty';
         empty.style.paddingLeft=(8+(depth+1)*16)+'px';
-        empty.textContent='(empty)';
+        empty.textContent=t('empty_dir');
         container.appendChild(empty);
       }
     }
@@ -1107,39 +1107,39 @@ function _renderTreeItems(container, entries, depth){
 
 async function deleteWorkspaceFile(relPath, name){
   if(!S.session)return;
-  if(!confirm(`Delete ${name}?`))return;
+  if(!confirm(t('delete_confirm',name)))return;
   try{
     await api('/api/file/delete',{method:'POST',body:JSON.stringify({session_id:S.session.session_id,path:relPath})});
-    showToast(`Deleted ${name}`);
+    showToast(t('deleted')+name);
     // Close preview if we just deleted the viewed file
     if($('previewPathText').textContent===relPath)$('btnClearPreview').onclick();
     await loadDir(S.currentDir);
-  }catch(e){setStatus('Delete failed: '+e.message);}
+  }catch(e){setStatus(t('delete_failed')+e.message);}
 }
 
 async function promptNewFile(){
   if(!S.session)return;
-  const name=prompt('New file name (e.g. notes.md):','');
+  const name=prompt(t('new_file_prompt'),'');
   if(!name||!name.trim())return;
   const relPath=S.currentDir==='.'?name.trim():(S.currentDir+'/'+name.trim());
   try{
     await api('/api/file/create',{method:'POST',body:JSON.stringify({session_id:S.session.session_id,path:relPath,content:''})});
-    showToast(`Created ${name.trim()}`);
+    showToast(t('created')+name.trim());
     await loadDir(S.currentDir);
     openFile(relPath);
-  }catch(e){setStatus('Create failed: '+e.message);}
+  }catch(e){setStatus(t('create_failed')+e.message);}
 }
 
 async function promptNewFolder(){
   if(!S.session)return;
-  const name=prompt('New folder name:','');
+  const name=prompt(t('new_folder_prompt'),'');
   if(!name||!name.trim())return;
   const relPath=S.currentDir==='.'?name.trim():(S.currentDir+'/'+name.trim());
   try{
     await api('/api/file/create-dir',{method:'POST',body:JSON.stringify({session_id:S.session.session_id,path:relPath})});
-    showToast(`Created folder ${name.trim()}`);
+    showToast(t('folder_created')+name.trim());
     await loadDir(S.currentDir);
-  }catch(e){setStatus('Create folder failed: '+e.message);}
+  }catch(e){setStatus(t('folder_create_failed')+e.message);}
 }
 
 function renderTray(){
@@ -1149,7 +1149,7 @@ function renderTray(){
   updateSendBtn();
   S.pendingFiles.forEach((f,i)=>{
     const chip=document.createElement('div');chip.className='attach-chip';
-    chip.innerHTML=`&#128206; ${esc(f.name)} <button title="Remove">&#10005;</button>`;
+    chip.innerHTML=`&#128206; ${esc(f.name)} <button title="${t('remove_title')}">&#10005;</button>`;
     chip.querySelector('button').onclick=()=>{S.pendingFiles.splice(i,1);renderTray();};
     tray.appendChild(chip);
   });
@@ -1171,12 +1171,12 @@ async function uploadPendingFiles(){
       const data=await res.json();
       if(data.error)throw new Error(data.error);
       names.push(data.filename);
-    }catch(e){failures++;setStatus(`\u274c Upload failed: ${f.name} \u2014 ${e.message}`);}
+    }catch(e){failures++;setStatus(`\u274c ${t('upload_failed')}${f.name} \u2014 ${e.message}`);}
     bar.style.width=`${Math.round((i+1)/total*100)}%`;
   }
   barWrap.classList.remove('active');bar.style.width='0%';
   S.pendingFiles=[];renderTray();
-  if(failures===total&&total>0)throw new Error(`All ${total} upload(s) failed`);
+  if(failures===total&&total>0)throw new Error(t('all_uploads_failed',total));
   return names;
 }
 

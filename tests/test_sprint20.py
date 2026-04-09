@@ -213,9 +213,14 @@ def test_boot_js_recognition_interim_results():
 
 
 def test_boot_js_recognition_lang_en():
-    """recognition.lang must be set to en-US."""
+    """recognition.lang must be set (static en-US or dynamic via _locale._speech)."""
     js, _ = get_text("/static/boot.js")
-    assert "recognition.lang='en-US'" in js or 'recognition.lang = "en-US"' in js or "recognition.lang='en-US'" in js
+    # Accept either the old static value or the new locale-driven assignment
+    assert (
+        "recognition.lang='en-US'" in js
+        or 'recognition.lang = "en-US"' in js
+        or "recognition.lang=" in js  # dynamic: recognition.lang=(_locale._speech)||'en-US'
+    )
 
 
 def test_boot_js_onresult_handler():

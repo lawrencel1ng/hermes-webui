@@ -777,6 +777,7 @@ _SETTINGS_DEFAULTS = {
     'sync_to_insights': False,  # mirror WebUI token usage to state.db for /insights
     'check_for_updates': True,  # check if webui/agent repos are behind upstream
     'theme': 'dark',  # active UI theme name (no enum gate -- allows custom themes)
+    'language': 'en',  # UI locale code; must match a key in static/i18n.js LOCALES
     'bot_name': os.getenv('HERMES_WEBUI_BOT_NAME', 'Hermes'),  # display name for the assistant
     'sound_enabled': False,  # play notification sound when assistant finishes
     'notifications_enabled': False,  # browser notification when tab is in background
@@ -800,6 +801,8 @@ _SETTINGS_ENUM_VALUES = {
     'send_key': {'enter', 'ctrl+enter'},
 }
 _SETTINGS_BOOL_KEYS = {'show_token_usage', 'show_cli_sessions', 'sync_to_insights', 'check_for_updates', 'sound_enabled', 'notifications_enabled'}
+# Language codes are validated as short alphanumeric BCP-47-like tags (e.g. 'en', 'zh', 'fr')
+_SETTINGS_LANG_RE = __import__('re').compile(r'^[a-zA-Z]{2,10}(-[a-zA-Z0-9]{2,8})?$')
 
 def save_settings(settings: dict) -> dict:
     """Save settings to disk. Returns the merged settings. Ignores unknown keys."""
@@ -817,6 +820,9 @@ def save_settings(settings: dict) -> dict:
         if k in _SETTINGS_ALLOWED_KEYS:
             # Validate enum-constrained keys
             if k in _SETTINGS_ENUM_VALUES and v not in _SETTINGS_ENUM_VALUES[k]:
+                continue
+            # Validate language codes (BCP-47-like: 'en', 'zh', 'fr', 'zh-CN')
+            if k == 'language' and (not isinstance(v, str) or not _SETTINGS_LANG_RE.match(v)):
                 continue
             # Coerce bool keys
             if k in _SETTINGS_BOOL_KEYS:
