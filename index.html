@@ -557,6 +557,7 @@
       align-items: start;
       margin-top: 48px;
     }
+    .webui-layout > * { min-width: 0; }
     .webui-features {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -746,6 +747,7 @@
       gap: 48px;
       margin-top: 48px;
     }
+    .install-layout > * { min-width: 0; }
     .providers-table-wrap {
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
@@ -1349,7 +1351,7 @@ docker run -d \
             <tr>
               <td>Claude Code</td>
               <td><span class="partial">Partial</span></td>
-              <td><span class="cloud">Cloud only</span></td>
+              <td><span class="cloud">Cloud or desktop app</span></td>
               <td><span class="prev">Preview</span></td>
               <td><span class="no">No</span></td>
               <td><span class="no">No</span></td>
@@ -1433,7 +1435,7 @@ docker run -d \
         <div class="comparison-card">
           <h4>Hermes vs. Claude Code</h4>
           <p>
-            Claude Code is Anthropic's official agentic tool, strong for focused coding sessions. It has a 26-event hooks system, a plugin/skills marketplace, CLAUDE.md/MEMORY.md project memory, and cloud-managed scheduling on Anthropic infrastructure. Research-preview messaging covers Telegram, Discord, and iMessage; Slack is not yet shipped. The key differences: scheduling runs on Anthropic's cloud (your data leaves your hardware), it's locked to Claude models, and it's not open source. Hermes can spawn Claude Code as a sub-agent for heavy implementation tasks — they're complementary.
+            Claude Code is Anthropic's official agentic tool, strong for focused coding sessions. It has a 26-event hooks system, a plugin/skills marketplace, CLAUDE.md/MEMORY.md project memory, and cloud-managed scheduling on Anthropic infrastructure. Research-preview messaging covers Telegram, Discord, and iMessage; Slack is not yet shipped. The key differences: cloud scheduling runs on Anthropic's infrastructure (data leaves your hardware; desktop app tasks run locally but require the app open), it's locked to Claude models, and it's not open source. Hermes can spawn Claude Code as a sub-agent for heavy implementation tasks — they're complementary.
           </p>
         </div>
 
