@@ -1,6 +1,16 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
+  <script>
+    // Canonical URL: strip trailing index.html so links always show the clean path
+    (function(){
+      var p = window.location.pathname;
+      if (p.endsWith('/index.html')) {
+        var clean = p.slice(0, p.length - 'index.html'.length);
+        window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
+      }
+    })();
+  </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>What is Hermes? — Explained Simply</title>
