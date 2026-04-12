@@ -13,9 +13,9 @@
   </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hermes — The self-improving AI agent</title>
+  <title>Hermes — Community Web UI</title>
   <meta name="description" content="Persistent memory, autonomous scheduling, and multi-surface access — all on hardware you control. Open source, self-hosted AI agent." />
-  <meta property="og:title" content="Hermes — The self-improving AI agent" />
+  <meta property="og:title" content="Hermes — Community Web UI (unofficial)" />
   <meta property="og:description" content="Persistent memory, autonomous scheduling, and multi-surface access — all on hardware you control." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://nesquena.github.io/hermes-webui/" />
@@ -436,6 +436,14 @@
     }
     .hero-credit a { color: var(--text-muted); text-decoration: underline; text-underline-offset: 3px; }
     .hero-credit a:hover { color: var(--text-secondary); }
+    .hero-community-note {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+      opacity: 0.7;
+    }
+    .hero-community-note a { color: var(--text-muted); text-decoration: underline; text-underline-offset: 2px; }
+    .hero-community-note a:hover { color: var(--text-secondary); opacity: 1; }
 
     /* ===== WHY HERMES ===== */
     .why-grid {
@@ -1395,6 +1403,9 @@
       <div class="hero-eyebrow">
         &#9889; Open source &middot; Self-hosted &middot; MIT licensed
       </div>
+      <div class="hero-community-note">
+        Community Web UI &mdash; not affiliated with <a href="https://nousresearch.com" target="_blank" rel="noopener">Nous Research</a>. Official site: <a href="https://hermes-agent.nousresearch.com" target="_blank" rel="noopener">hermes-agent.nousresearch.com</a>
+      </div>
       <h1 class="hero-title">
         Hermes<br /><span class="accent">Agent</span>
       </h1>
@@ -2321,7 +2332,8 @@ hermes doctor         # diagnose any issues</code></pre>
     <div class="footer-left">
       Hermes is <a href="https://github.com/NousResearch/hermes-agent" target="_blank" rel="noopener">open source</a> and MIT licensed.
       Built by <a href="https://nousresearch.com" target="_blank" rel="noopener">Nous Research</a>.
-      Web UI by <a href="https://github.com/nesquena/hermes-webui" target="_blank" rel="noopener">nesquena/hermes-webui</a>.
+      This community Web UI (<a href="https://github.com/nesquena/hermes-webui" target="_blank" rel="noopener">nesquena/hermes-webui</a>) is an independent project, not affiliated with or endorsed by Nous Research.
+      For the official product, visit <a href="https://hermes-agent.nousresearch.com" target="_blank" rel="noopener">hermes-agent.nousresearch.com</a>.
     </div>
     <div class="footer-links">
       <a href="https://hermes-agent.nousresearch.com/docs/" target="_blank" rel="noopener">Docs</a>
