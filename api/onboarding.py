@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from urllib.parse import urlparse
@@ -23,6 +24,8 @@ from api.config import (
     verify_hermes_imports,
 )
 from api.workspace import get_last_workspace, load_workspaces
+
+logger = logging.getLogger(__name__)
 
 
 _SUPPORTED_PROVIDER_SETUPS = {
@@ -234,7 +237,7 @@ def _provider_oauth_authenticated(provider: str, hermes_home: "Path") -> bool:
         if isinstance(status, dict) and status.get("logged_in"):
             return True
     except Exception:
-        pass
+        logger.debug("Failed to get auth status for provider %s", provider)
 
     # Fallback: parse auth.json ourselves for known OAuth provider IDs.
     # Covers deployments where hermes_cli is installed but the import above
@@ -489,14 +492,14 @@ def apply_onboarding_setup(body: dict) -> dict:
         from api.profiles import _reload_dotenv
         _reload_dotenv(_get_active_hermes_home())
     except Exception:
-        pass
+        logger.debug("Failed to reload dotenv")
 
     try:
         # hermes_cli may cache config at import time; ask it to reload if possible.
         from hermes_cli.config import reload as _cli_reload
         _cli_reload()
     except Exception:
-        pass
+        logger.debug("Failed to reload hermes_cli config")
 
     reload_config()
     return get_onboarding_status()
